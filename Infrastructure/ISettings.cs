@@ -5,5 +5,8 @@
         string GetMongoDB();
         string GetDatabaseName();
         string GetSMTPServer();
+        string GetSMTPMailId();
+        string GetSMTPPassword();
+
     }
 }

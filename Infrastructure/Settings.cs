@@ -25,7 +25,17 @@ namespace Infrastructure
 
         public string GetSMTPServer()
         {
-            return _settings.SMTP.server;
+            return _settings.SMTP.Server;
+        }
+
+        public string GetSMTPMailId()
+        {
+            return _settings.SMTP.FromMail;
+        }
+
+        public string GetSMTPPassword()
+        {
+            return _settings.SMTP.Password;
         }
     }
 }

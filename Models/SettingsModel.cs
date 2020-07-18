@@ -10,7 +10,10 @@ namespace Models
 
     public class SMTPSettings
     {
-        public string server { get; set; }
+        public string Server { get; set; }
+        public string FromMail { get; set; }
+        public string Password { get; set; }
+
     }
 
     public class MongoSettings

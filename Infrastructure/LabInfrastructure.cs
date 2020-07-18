@@ -7,6 +7,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using Volvo.NAMS.LoggingDomain.Model.DomainLayer;
+using System.Net.Mail;
 
 namespace Infrastructure
 {
@@ -100,12 +101,20 @@ namespace Infrastructure
             }
         }
 
-        private string getLabName(int labId)
+        private string GetLabName(int labId)
         {
             var mongoCollection = _db.GetCollection<LabList>("LabList").AsQueryable<LabList>()
                     .Where(e => e.LabId == labId
                     ).FirstOrDefault();
             return mongoCollection.LabName;
+        }
+
+        private string GetAdminMailId(int labId)
+        {
+            var mongoCollection = _db.GetCollection<LabList>("LabList").AsQueryable<LabList>()
+                    .Where(e => e.LabId == labId
+                    ).FirstOrDefault();
+            return mongoCollection.LabAdminMail;
         }
 
         public string InsertLabSLot(LabModel labModel)
@@ -127,6 +136,7 @@ namespace Infrastructure
                 labSlot.StartTime = labSlot.StartTime.AddHours(5.5);
                 labSlot.EndTime = labSlot.EndTime.AddHours(5.5);
                 _db.GetCollection<LabModel>("LabSlots").Insert(labSlot);
+                SendMail(labSlot, 0);
             }
             catch (Exception)
             {
@@ -148,6 +158,7 @@ namespace Infrastructure
                     documents.Approved = approved;
                     documents.isApproved = true;
                     mongoCollection.Save(documents);
+                    SendMail(documents, 1);
                 }
                 else
                     return "Slot is already Booked and approved or No longer Valid";
@@ -194,5 +205,39 @@ namespace Infrastructure
             }
         }
 
+        private void SendMail(LabModel lab, int i)
+        {
+            var notifyMsg = new MailMessage();
+            switch (i)
+            {
+                case 0:
+                    notifyMsg = new MailMessage
+                    {
+                        Subject = "New Request for Lab Slot",
+                        Body = $"User {lab.UserName} requested for lab {GetLabName(lab.LabId)} in timeslot from {lab.StartTime} to {lab.EndTime}. Kindly refer Dashboard for Approve/Decline",
+                        From = new MailAddress(_settings.GetSMTPMailId())
+                    };
+                    notifyMsg.To.Add(new MailAddress(GetAdminMailId(lab.LabId)));
+                    notifyMsg.CC.Add(new MailAddress(lab.Email));
+                    break;
+
+                case 1:
+                    string approve = (lab.Approved == true ? "Approved" : "Declined");
+                    notifyMsg = new MailMessage
+                    {
+                        Subject = "Lab Slot Approval Status",
+                        Body = $"Your lab request is {approve} by Lab Admin",
+                        From = new MailAddress(_settings.GetSMTPMailId())
+                    };
+                    break;
+            }          
+
+            var smtpSender = new SmtpClient(_settings.GetSMTPServer())
+            {
+                DeliveryMethod = SmtpDeliveryMethod.Network
+            };
+            smtpSender.Send(notifyMsg);
+        }
+               
     }
 }
